@@ -6,6 +6,8 @@ import re
 
 import anthropic
 import openai
+from google import genai
+from google.genai import types as genai_types
 
 from app.config import settings
 from app.industry import get_industry_config
@@ -88,8 +90,11 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start:end])
 
 
+# --- Provider backends ---
+
+
 def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
-    """Call Anthropic Claude API and return raw text."""
+    """Anthropic Claude API."""
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     message = client.messages.create(
         model=settings.model_name,
@@ -102,10 +107,17 @@ def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
 
 
 def _call_openai_compatible(system_prompt: str, user_prompt: str) -> str:
-    """Call any OpenAI-compatible API (Ollama, vLLM, llama.cpp, etc.) and return raw text."""
+    """OpenAI ChatGPT + any OpenAI-compatible API.
+
+    Works with: OpenAI, DeepSeek, Mistral, xAI/Grok, Groq, Together AI,
+    Fireworks AI, Perplexity, Ollama, vLLM, llama.cpp, LM Studio.
+    """
+    kwargs = {}
+    if settings.llm_base_url:
+        kwargs["base_url"] = settings.llm_base_url
     client = openai.OpenAI(
         api_key=settings.openai_api_key or "not-needed",
-        base_url=settings.llm_base_url,
+        **kwargs,
     )
     response = client.chat.completions.create(
         model=settings.model_name,
@@ -117,6 +129,32 @@ def _call_openai_compatible(system_prompt: str, user_prompt: str) -> str:
         ],
     )
     return response.choices[0].message.content
+
+
+def _call_google(system_prompt: str, user_prompt: str) -> str:
+    """Google Gemini API."""
+    client = genai.Client(api_key=settings.google_api_key)
+    response = client.models.generate_content(
+        model=settings.model_name,
+        contents=user_prompt,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            max_output_tokens=settings.max_tokens,
+            temperature=settings.temperature,
+        ),
+    )
+    return response.text
+
+
+# --- Dispatcher ---
+
+_PROVIDERS = {
+    "anthropic": _call_anthropic,
+    "openai": _call_openai_compatible,
+    "google": _call_google,
+}
+
+_API_ERRORS = (anthropic.APIError, openai.APIError)
 
 
 def call_llm(
@@ -133,24 +171,26 @@ def call_llm(
     system_prompt = _build_system_prompt()
     user_prompt = _build_user_prompt(subject, body, metadata)
     provider = settings.llm_provider
+    call_fn = _PROVIDERS[provider]
 
     last_error = None
     for attempt in range(1, max_retries + 1):
         logger.info("LLM call attempt %d/%d (provider=%s, model=%s)", attempt, max_retries, provider, settings.model_name)
         try:
-            if provider == "anthropic":
-                raw = _call_anthropic(system_prompt, user_prompt)
-            else:
-                raw = _call_openai_compatible(system_prompt, user_prompt)
-
+            raw = call_fn(system_prompt, user_prompt)
             return _extract_json(raw)
 
         except (json.JSONDecodeError, ValueError) as exc:
             last_error = exc
             logger.warning("JSON parse failed on attempt %d: %s", attempt, exc)
-        except (anthropic.APIError, openai.APIError) as exc:
+        except _API_ERRORS as exc:
             last_error = exc
             logger.error("API error on attempt %d: %s", attempt, exc)
+            if attempt == max_retries:
+                raise
+        except Exception as exc:
+            last_error = exc
+            logger.error("Provider error on attempt %d: %s", attempt, exc)
             if attempt == max_retries:
                 raise
 
