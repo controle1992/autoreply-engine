@@ -1,0 +1,54 @@
+name: "Centre de Santé"
+description: "Clinique ou centre médical — rendez-vous, résultats, assurance, réclamations"
+language: "fr"
+company_name: ""
+
+categories:
+  - name: appointment
+    description: "Prise de rendez-vous, modification, annulation"
+  - name: results
+    description: "Demande de résultats d'examens ou de comptes rendus médicaux"
+  - name: billing
+    description: "Facturation, remboursement, prise en charge assurance"
+  - name: prescription
+    description: "Renouvellement d'ordonnance, question sur un traitement"
+  - name: complaint
+    description: "Insatisfaction, temps d'attente, qualité des soins"
+  - name: insurance
+    description: "Questions sur la couverture, mutuelle, tiers payant"
+  - name: other
+    description: "Demandes générales ne correspondant à aucune autre catégorie"
+
+entities:
+  - patient_name
+  - patient_id
+  - date_of_birth
+  - appointment_date
+  - doctor_name
+  - insurance_number
+  - amount
+
+response_rules:
+  - category: complaint
+    instruction: "S'excuser, montrer de l'empathie et proposer un suivi personnalisé"
+    reply_must_contain: ["excus", "désol", "navré"]
+    fallback_prefix: "Nous sommes sincèrement désolés pour cette expérience et nous prenons votre retour très au sérieux.\n\n"
+
+  - category: appointment
+    instruction: "Confirmer la disponibilité et expliquer la procédure de prise de rendez-vous"
+    ensure_action: "Vérifier les disponibilités dans le planning médical"
+
+  - category: results
+    instruction: "Expliquer comment accéder aux résultats et les délais habituels"
+    reply_must_contain: ["résultat", "compte rendu", "espace patient"]
+    fallback_suffix: >-
+
+
+      Vos résultats sont disponibles dans votre espace patient en ligne.
+      Si vous n'avez pas encore de compte, merci de nous contacter avec
+      une pièce d'identité pour en créer un. Les résultats sont généralement
+      disponibles sous 48 à 72 heures après l'examen.
+
+  - category: billing
+    instruction: "Expliquer le détail de la facturation et les options de prise en charge"
+    ensure_action: "Vérifier le dossier de facturation du patient"

@@ -1,0 +1,51 @@
+name: "Services Publics"
+description: "Entreprise de services publics (eau, électricité, gaz)"
+language: "fr"
+company_name: ""
+
+categories:
+  - name: billing
+    description: "Erreurs de facturation, problèmes de paiement, questions tarifaires"
+  - name: complaint
+    description: "Qualité de service, coupures, insatisfaction client"
+  - name: move
+    description: "Déménagement, changement d'adresse, transfert de contrat"
+  - name: contract
+    description: "Nouveau contrat, modification, résiliation"
+  - name: technical_issue
+    description: "Problèmes de compteur, pannes, alimentation"
+  - name: other
+    description: "Demandes générales ne correspondant à aucune autre catégorie"
+
+entities:
+  - customer_name
+  - contract_id
+  - address
+  - date
+  - amount
+  - meter_number
+
+response_rules:
+  - category: complaint
+    instruction: "S'excuser et proposer une résolution"
+    reply_must_contain: ["excus", "désol", "pardon", "regrett", "navré"]
+    fallback_prefix: "Nous vous prions de bien vouloir nous excuser pour ce désagrément.\n\n"
+
+  - category: billing
+    instruction: "Expliquer les causes possibles et les prochaines étapes"
+    ensure_action: "Vérifier l'historique de facturation du client"
+
+  - category: move
+    instruction: "Demander les documents nécessaires pour le transfert"
+    reply_must_contain: ["justificatif", "document", "pièce", "attestation"]
+    fallback_suffix: >-
+
+
+      Afin de traiter votre demande de déménagement, nous vous prions de nous
+      fournir les documents suivants :
+
+      - Un justificatif de domicile du nouveau logement
+
+      - Votre relevé de compteur au moment du départ
+
+      - La date souhaitée de mise en service

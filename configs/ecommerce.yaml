@@ -1,0 +1,60 @@
+name: "E-Commerce"
+description: "Boutique en ligne — commandes, livraisons, retours, produits"
+language: "fr"
+company_name: ""
+
+categories:
+  - name: order_issue
+    description: "Problème avec une commande (erreur, article manquant, commande non reçue)"
+  - name: return_refund
+    description: "Demande de retour, échange ou remboursement"
+  - name: delivery
+    description: "Suivi de livraison, retard, adresse incorrecte"
+  - name: product_question
+    description: "Question sur un produit (disponibilité, taille, compatibilité)"
+  - name: account
+    description: "Problème de compte, mot de passe, données personnelles"
+  - name: complaint
+    description: "Insatisfaction générale, mauvaise expérience"
+  - name: other
+    description: "Demandes générales ne correspondant à aucune autre catégorie"
+
+entities:
+  - customer_name
+  - order_number
+  - product_name
+  - address
+  - date
+  - amount
+  - tracking_number
+
+response_rules:
+  - category: complaint
+    instruction: "S'excuser et proposer une résolution concrète (remboursement, bon d'achat)"
+    reply_must_contain: ["excus", "désol", "navré"]
+    fallback_prefix: "Nous sommes sincèrement désolés pour cette expérience.\n\n"
+
+  - category: return_refund
+    instruction: "Expliquer la procédure de retour et les délais de remboursement"
+    reply_must_contain: ["retour", "rembours", "échange"]
+    fallback_suffix: >-
+
+
+      Pour effectuer un retour, veuillez suivre ces étapes :
+
+      1. Connectez-vous à votre espace client
+
+      2. Sélectionnez la commande concernée
+
+      3. Cliquez sur « Demander un retour »
+
+      Vous recevrez une étiquette de retour par email. Le remboursement sera
+      effectué sous 5 à 10 jours ouvrés après réception du colis.
+
+  - category: delivery
+    instruction: "Fournir les informations de suivi et les délais estimés"
+    ensure_action: "Vérifier le statut de livraison dans le système logistique"
+
+  - category: order_issue
+    instruction: "Vérifier la commande et proposer une solution (renvoi, remboursement)"
+    ensure_action: "Vérifier le détail de la commande dans le système"
